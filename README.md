@@ -1,6 +1,6 @@
 # API Maestro-Detalle con Catálogo y Control de Estado
 
-**Autor:** Amatony Jeovani Castañeda Rios — Carnet 1890-17-15352
+**Autor:** Amtony Jeovani Castañeda Rios — Carnet 1890-17-15352
 
 API en **Node.js + Express + SQL Server** que recibe en un solo `POST` un JSON
 maestro-detalle (estudiante + misiones), valida las misiones contra el catálogo
