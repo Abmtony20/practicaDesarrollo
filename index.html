@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tablero de Misiones</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <header><p class="eyebrow">API MAESTRO-DETALLE</p><h1>Avance de estudiantes</h1><p>Misiones completadas y pendientes registradas en el catálogo.</p></header>
+      <section id="estado" class="estado">Cargando tablero…</section>
+      <section id="tablero" class="tablero" aria-live="polite"></section>
+    </main>
+    <template id="estudiante-template">
+      <article class="tarjeta"><div class="cabecera"><div><h2></h2><p class="correo"></p></div><span class="avance"></span></div><div class="barra"><span></span></div><ul class="misiones"></ul></article>
+    </template>
+    <script src="app.js"></script>
+  </body>
+</html>
