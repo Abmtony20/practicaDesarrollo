@@ -1,20 +1,323 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tablero de Misiones</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <main>
-      <header><p class="eyebrow">API MAESTRO-DETALLE</p><h1>Avance de estudiantes</h1><p>Misiones completadas y pendientes registradas en el catálogo.</p></header>
-      <section id="estado" class="estado">Cargando tablero…</section>
-      <section id="tablero" class="tablero" aria-live="polite"></section>
-    </main>
-    <template id="estudiante-template">
-      <article class="tarjeta"><div class="cabecera"><div><h2></h2><p class="correo"></p></div><span class="avance"></span></div><div class="barra"><span></span></div><ul class="misiones"></ul></article>
-    </template>
-    <script src="app.js"></script>
-  </body>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tablero de Misiones</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --ok: #22c55e;
+    --pending: #ef4444;
+    --blue: #3b82f6;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px 16px;
+  }
+  main { max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 0 0 12px; }
+  .sub { color: var(--muted); margin-bottom: 20px; }
+  input, button, textarea {
+    font: inherit;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #0b1220;
+    color: var(--text);
+  }
+  button { background: var(--blue); border: none; color: #fff; cursor: pointer; }
+  button:disabled { opacity: .6; cursor: default; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .row input { flex: 1; min-width: 200px; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tabs button { background: none; border-radius: 6px 6px 0 0; color: var(--muted); }
+  .tabs button.active { background: var(--card); color: var(--text); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+  .stat .n { font-size: 1.6rem; font-weight: 600; }
+  .stat .l { color: var(--muted); font-size: .85rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .card { background: var(--card); border-radius: 10px; padding: 16px; border: 1px solid var(--border); }
+  .card h3 { margin: 0 0 2px; font-size: 1.05rem; }
+  .card .carnet { color: var(--muted); font-size: .85rem; margin-bottom: 10px; word-break: break-all; }
+  .bar-bg { background: var(--border); border-radius: 6px; height: 10px; overflow: hidden; margin-bottom: 6px; }
+  .bar-fill { background: var(--ok); height: 100%; }
+  .progreso-txt { font-size: .85rem; color: var(--muted); margin-bottom: 10px; }
+  ul.misiones { list-style: none; padding: 0; margin: 0; }
+  ul.misiones li { display: flex; align-items: center; gap: 8px; font-size: .9rem; padding: 3px 0; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot.ok { background: var(--ok); }
+  .dot.pending { background: var(--pending); }
+  .tag { margin-left: auto; font-size: .75rem; color: var(--muted); }
+  .msg { color: var(--muted); margin-bottom: 16px; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  label.f { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; color: var(--muted); }
+  .mis-check { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .mis-check input[type=checkbox] { width: 18px; height: 18px; }
+  .mis-check .d { color: var(--muted); font-size: .8rem; }
+  .mis-check select { margin-left: auto; }
+  pre { background: #0b1220; border: 1px solid var(--border); border-radius: 6px; padding: 12px; overflow: auto; font-size: .8rem; max-height: 360px; }
+  .ok-txt { color: var(--ok); }
+  .err-txt { color: var(--pending); }
+  .hidden { display: none; }
+  @media (max-width: 600px) { .row input { min-width: 0; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>🎯 Tablero de Misiones — Reto Maestro-Detalle</h1>
+  <div class="sub">Avance de cada estudiante: misiones completadas vs pendientes</div>
+
+  <div class="row">
+    <input id="apiBase" type="text" placeholder="URL base de la API, ej: https://mi-api.onrender.com" />
+    <button id="btnGuardarApi">Conectar</button>
+  </div>
+
+  <nav class="tabs">
+    <button data-tab="tablero" class="active">Tablero</button>
+    <button data-tab="registro">Registrar avance (POST)</button>
+    <button data-tab="catalogo">Catálogo</button>
+  </nav>
+
+  <!-- ===== Tablero ===== -->
+  <section id="tab-tablero">
+    <div class="stats" id="stats"></div>
+    <div class="row">
+      <input id="buscar" type="search" placeholder="Buscar por nombre, carnet o correo…" />
+      <button id="btnRecargar">Actualizar</button>
+    </div>
+    <div class="msg" id="estado-msg">Cargando datos…</div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- ===== Registro ===== -->
+  <section id="tab-registro" class="hidden">
+    <form id="formRegistro" class="panel">
+      <h2>Maestro (estudiante)</h2>
+      <div class="form-grid">
+        <label class="f">Carnet <input name="carnet" required maxlength="25" placeholder="0000-00-00000" /></label>
+        <label class="f">Nombre <input name="nombre" required maxlength="150" /></label>
+        <label class="f">Correo <input name="correo" type="email" required maxlength="150" placeholder="usuario@miumg.edu.gt" /></label>
+      </div>
+      <h2>Detalle (misiones)</h2>
+      <p class="msg">Marca las misiones que quieres enviar y elige su estado.</p>
+      <div id="listaMisionesForm"></div>
+      <div class="row" style="margin-top:16px">
+        <button type="button" id="btnCargarActual">Cargar mi estado actual</button>
+        <button type="submit" id="btnEnviar">Enviar POST /api/registro</button>
+      </div>
+    </form>
+    <div class="panel">
+      <h2>JSON que se enviará</h2>
+      <pre id="jsonPreview"></pre>
+      <h2>Respuesta de la API</h2>
+      <pre id="respuesta">—</pre>
+    </div>
+  </section>
+
+  <!-- ===== Catálogo ===== -->
+  <section id="tab-catalogo" class="hidden">
+    <div class="panel"><pre id="catalogo">Cargando…</pre></div>
+  </section>
+  <footer style="margin-top:32px;color:var(--muted);font-size:.85rem;text-align:center">
+    Desarrollado por Amatony Jeovani Castañeda Rios · Carnet 1890-17-15352 · UMG
+  </footer>
+</main>
+
+<script src="config.js"></script>
+<script>
+  // ---------- Configuración de URL de la API ----------
+  const $ = (id) => document.getElementById(id);
+  let guardada = null;
+  try { guardada = localStorage.getItem('apiBase'); } catch {}
+  const porDefecto = (window.API_URL || '').trim() || (location.protocol.startsWith('http') ? location.origin : 'http://localhost:3000');
+  $('apiBase').value = guardada || porDefecto;
+  const api = (ruta) => $('apiBase').value.trim().replace(/\/$/, '') + ruta;
+
+  $('btnGuardarApi').onclick = () => {
+    try { localStorage.setItem('apiBase', $('apiBase').value.trim()); } catch {}
+    iniciar();
+  };
+
+  // ---------- Pestañas ----------
+  document.querySelectorAll('.tabs button').forEach((b) => {
+    b.onclick = () => {
+      document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('active', x === b));
+      ['tablero', 'registro', 'catalogo'].forEach((t) => $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab));
+    };
+  });
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  // ---------- Tablero ----------
+  let estudiantes = [];
+
+  async function cargarEstudiantes() {
+    const msg = $('estado-msg');
+    msg.textContent = 'Cargando datos…';
+    try {
+      const res = await fetch(api('/api/estudiantes'));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      estudiantes = await res.json();
+      pintarTablero();
+    } catch (err) {
+      estudiantes = [];
+      $('grid').innerHTML = '';
+      $('stats').innerHTML = '';
+      msg.innerHTML = `<span class="err-txt">Error al cargar datos: ${escapeHtml(err.message)}. Verifica la URL de la API.</span>`;
+    }
+  }
+
+  function pintarTablero() {
+    const q = $('buscar').value.trim().toLowerCase();
+    const lista = estudiantes.filter((e) =>
+      !q || [e.nombre, e.carnet, e.correo].some((v) => String(v).toLowerCase().includes(q)));
+
+    const total = estudiantes.length;
+    const completos = estudiantes.filter((e) => e.progreso.total && e.progreso.completadas === e.progreso.total).length;
+    const promedio = total ? Math.round(estudiantes.reduce((s, e) => s + e.progreso.porcentaje, 0) / total) : 0;
+    $('stats').innerHTML = `
+      <div class="stat"><div class="n">${total}</div><div class="l">Estudiantes</div></div>
+      <div class="stat"><div class="n">${completos}</div><div class="l">Con todas las misiones</div></div>
+      <div class="stat"><div class="n">${promedio}%</div><div class="l">Avance promedio</div></div>`;
+
+    $('estado-msg').textContent = total
+      ? `Mostrando ${lista.length} de ${total} estudiante(s)`
+      : 'Todavía no hay estudiantes registrados.';
+
+    $('grid').innerHTML = lista.map((est) => `
+      <div class="card">
+        <h3>${escapeHtml(est.nombre)}</h3>
+        <div class="carnet">${escapeHtml(est.carnet)} · ${escapeHtml(est.correo)}</div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${est.progreso.porcentaje}%"></div></div>
+        <div class="progreso-txt">
+          ${est.progreso.completadas} completadas · ${est.progreso.pendientes} pendientes (${est.progreso.porcentaje}%)
+        </div>
+        <ul class="misiones">
+          ${est.misiones.map((m) => `
+            <li>
+              <span class="dot ${m.estado ? 'ok' : 'pending'}"></span>
+              ${m.misionId}. ${escapeHtml(m.nombre)}
+              ${m.registrada ? '' : '<span class="tag">sin enviar</span>'}
+            </li>`).join('')}
+        </ul>
+      </div>`).join('');
+  }
+
+  $('buscar').oninput = pintarTablero;
+  $('btnRecargar').onclick = cargarEstudiantes;
+
+  // ---------- Catálogo + formulario ----------
+  let catalogo = [];
+
+  async function cargarCatalogo() {
+    try {
+      const res = await fetch(api('/api/misiones'));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      catalogo = await res.json();
+      $('catalogo').textContent = JSON.stringify(catalogo, null, 2);
+    } catch (err) {
+      catalogo = [];
+      $('catalogo').textContent = 'Error: ' + err.message;
+    }
+    $('listaMisionesForm').innerHTML = catalogo.map((m) => `
+      <div class="mis-check">
+        <input type="checkbox" data-id="${m.misionId}" checked />
+        <div><div>${m.misionId}. ${escapeHtml(m.nombre)}</div><div class="d">${escapeHtml(m.descripcion)}</div></div>
+        <select data-estado="${m.misionId}">
+          <option value="true">Completada (true)</option>
+          <option value="false">Pendiente (false)</option>
+        </select>
+      </div>`).join('');
+    actualizarPreview();
+  }
+
+  function construirJson() {
+    const f = $('formRegistro');
+    const detalle = [...document.querySelectorAll('#listaMisionesForm input[type=checkbox]')]
+      .filter((c) => c.checked)
+      .map((c) => ({
+        misionId: Number(c.dataset.id),
+        estado: document.querySelector(`select[data-estado="${c.dataset.id}"]`).value === 'true'
+      }));
+    return {
+      maestro: { carnet: f.carnet.value.trim(), nombre: f.nombre.value.trim(), correo: f.correo.value.trim() },
+      detalle
+    };
+  }
+
+  function actualizarPreview() {
+    $('jsonPreview').textContent = JSON.stringify(construirJson(), null, 2);
+  }
+
+  $('formRegistro').addEventListener('input', actualizarPreview);
+  $('formRegistro').addEventListener('change', actualizarPreview);
+
+  // Rellena el formulario con lo que ya existe en la BD para ese carnet
+  $('btnCargarActual').onclick = async () => {
+    const f = $('formRegistro');
+    const carnet = f.carnet.value.trim();
+    if (!carnet) { $('respuesta').textContent = 'Escribe primero tu carnet.'; return; }
+    try {
+      const res = await fetch(api('/api/estudiantes/' + encodeURIComponent(carnet)));
+      const data = await res.json();
+      if (!res.ok) { $('respuesta').textContent = JSON.stringify(data, null, 2); return; }
+      f.nombre.value = data.nombre;
+      f.correo.value = data.correo;
+      for (const m of data.misiones) {
+        const sel = document.querySelector(`select[data-estado="${m.misionId}"]`);
+        if (sel) sel.value = String(m.estado);
+      }
+      actualizarPreview();
+      $('respuesta').textContent = 'Datos actuales cargados.';
+    } catch (err) {
+      $('respuesta').textContent = 'Error: ' + err.message;
+    }
+  };
+
+  $('formRegistro').onsubmit = async (e) => {
+    e.preventDefault();
+    const body = construirJson();
+    const out = $('respuesta');
+    $('btnEnviar').disabled = true;
+    out.textContent = 'Enviando…';
+    try {
+      const res = await fetch(api('/api/registro'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      out.innerHTML = `<span class="${res.ok ? 'ok-txt' : 'err-txt'}">HTTP ${res.status}</span>\n` +
+        escapeHtml(JSON.stringify(data, null, 2));
+      if (res.ok) cargarEstudiantes();
+    } catch (err) {
+      out.innerHTML = `<span class="err-txt">${escapeHtml(err.message)}</span>`;
+    } finally {
+      $('btnEnviar').disabled = false;
+    }
+  };
+
+  function iniciar() {
+    cargarEstudiantes();
+    cargarCatalogo();
+  }
+  iniciar();
+</script>
+</body>
 </html>

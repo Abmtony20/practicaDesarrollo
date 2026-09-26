@@ -1,0 +1,20 @@
+# Blueprint para Render.com (backend Node.js + Express)
+services:
+  - type: web
+    name: reto-maestro-detalle
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DB_USER
+        value: UsuarioEncuestas
+      - key: DB_PASSWORD
+        sync: false          # se escribe a mano en el panel de Render
+      - key: DB_SERVER
+        value: svr-sql-ctezo.southcentralus.cloudapp.azure.com
+      - key: DB_DATABASE
+        value: db_WebDevUMG
+      - key: DB_PORT
+        value: "1433"

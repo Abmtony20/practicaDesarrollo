@@ -1,16 +1,23 @@
 {
-  "name": "api-maestro-detalle-misiones",
+  "name": "reto-maestro-detalle-api",
   "version": "1.0.0",
-  "private": true,
-  "type": "module",
+  "description": "API Maestro-Detalle con Catálogo y Control de Estado (UMG)",
+  "main": "server.js",
   "scripts": {
-    "dev": "node --watch src/server.js",
-    "start": "node src/server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
     "mssql": "^11.0.1"
-  }
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "Amatony Jeovani Castañeda Rios (1890-17-15352)"
 }
