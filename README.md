@@ -13,7 +13,6 @@ e inserta/actualiza los datos dentro de una transacción. Incluye un frontend
 ├── server.js                  # Endpoints Express
 ├── db.js                      # Pool de conexión a SQL Server
 ├── schema.sql                 # Modelo relacional (referencia, las tablas ya existen)
-├── render.yaml                # Despliegue del backend en Render.com
 ├── .env.example               # Plantilla de variables de entorno
 └── public/
     ├── index.html             # Tablero + formulario POST + catálogo
@@ -88,28 +87,34 @@ Respuestas:
 
 ## 6. Despliegue
 
-### Backend → Render.com
-1. Entra a <https://render.com> con tu cuenta de GitHub.
-2. **New → Blueprint** y elige este repositorio (usa `render.yaml`).
-3. Cuando lo pida, escribe el valor de `DB_PASSWORD`.
-4. Al terminar tendrás una URL como `https://reto-maestro-detalle.onrender.com`.
-   Prueba `https://…/api/health`.
+| Parte | URL |
+| --- | --- |
+| Frontend (GitHub Pages) | <https://abmtony20.github.io/practicaDesarrollo/> |
+| API (Azure App Service) | <https://reto-maestro-detalle-amtony-c0erbjeyhwfgcsa7.mexicocentral-01.azurewebsites.net> |
+
+### Backend → Azure App Service
+Web App `reto-maestro-detalle-amtony` (Linux, Node 22 LTS, Mexico Central),
+grupo de recursos `rg-reto-maestro-detalle`.
+
+Variables de entorno configuradas en Azure: `DB_USER`, `DB_PASSWORD`, `DB_SERVER`,
+`DB_DATABASE`, `DB_PORT` y `SCM_DO_BUILD_DURING_DEPLOYMENT=true` (Azure ejecuta
+`npm install` al desplegar). Comando de inicio: `npm start`.
+
+Para volver a desplegar después de un cambio (requiere Azure CLI y `az login`):
+
+```bash
+git archive --format=zip -o deploy.zip HEAD
+az webapp deploy -g rg-reto-maestro-detalle -n reto-maestro-detalle-amtony --src-path deploy.zip --type zip
+```
 
 ### Frontend → GitHub Pages
-El contenido de `public/` se publica en la rama `gh-pages`:
+`public/config.js` apunta a la API de Azure. El contenido de `public/` se publica
+en la rama `gh-pages`:
 
 ```bash
 git subtree split --prefix public -b gh-pages
-git push -f origin gh-pages
+git push origin gh-pages
 ```
-
-Sitio: <https://abmtony20.github.io/practicaDesarrollo/>
-
-Cuando el backend esté en línea, pon su URL en `public/config.js`
-(`window.API_URL = 'https://...onrender.com';`) y vuelve a publicar.
-
-> El plan gratuito de Render “duerme” el servicio tras 15 min sin uso; la primera
-> petición puede tardar ~1 minuto en responder.
 
 ## 7. Seguridad
 - El `.env` real nunca se sube a GitHub (está en `.gitignore`).
